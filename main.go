@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"strings"
 	_ "github.com/go-sql-driver/mysql"
 	"flag"
 	"fmt"
@@ -157,11 +158,13 @@ func GetWorkload(name string, threadId int, partitionOffset int64, mode string, 
 	panic("unreachable")
 }
 
-func GetMode(name string) func(session *sql.DB, resultChannel chan Result, workload WorkloadGenerator, rateLimiter RateLimiter) {
+func GetMode(name string) func(session *sql.DB, sessionRead *sql.DB, resultChannel chan Result, workload WorkloadGenerator, rateLimiter RateLimiter) {
 	switch name {
 
 	case "write":
 		return DoWritesMySQL
+	case "write_read":
+		return DoWritesMySQLAndRead
 	default:
 		log.Fatal("unknown mode: ", name)
 	}
@@ -359,12 +362,34 @@ func main() {
 	// 	}
 	// }
 
+	clusterNodes := strings.Split(nodes, ",")
+	var sessionDefault *sql.DB
+	var sessionReadVerify *sql.DB
+	var err error
+	for i := range clusterNodes {
+		node := clusterNodes[i]
+		constr :=  username+":"+password+"@tcp("+node+")/"+keyspaceName
+		fmt.Println(constr)
+		if i == 0 {
+			sessionDefault, err = sql.Open("mysql", constr)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			sessionReadVerify, err = sql.Open("mysql", constr)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
 	// create mysql session
-	constr :=  username+":"+password+"@tcp("+nodes+")/"+keyspaceName
+	// constr :=  username+":"+password+"@tcp("+nodes+")/"+keyspaceName
 
-	fmt.Println(constr)
-
-	session, err := sql.Open("mysql", constr)
+	// session, err := sql.Open("mysql", constr)
+	session := sessionDefault
+	if sessionReadVerify == nil {
+		sessionReadVerify = sessionDefault
+	}
 
 	// session, err := cluster.CreateSession()
 	if err != nil {
@@ -437,7 +462,7 @@ func main() {
 	}
 
 	result := RunConcurrently(maximumRate, func(i int, resultChannel chan Result, rateLimiter RateLimiter) {
-		GetMode(mode)(session, resultChannel, GetWorkload(workload, i, partitionOffset, mode, writeRate, distribution), rateLimiter)
+		GetMode(mode)(session, sessionReadVerify, resultChannel, GetWorkload(workload, i, partitionOffset, mode, writeRate, distribution), rateLimiter)
 	})
 
 	fmt.Println("\nResults")
