@@ -163,6 +163,8 @@ func GetMode(name string) func(session *sql.DB, sessionRead *sql.DB, resultChann
 
 	case "write":
 		return DoWritesMySQL
+	case "write_deep":
+		return DoWritesDeepMySQL
 	case "write_read":
 		return DoWritesMySQLAndRead
 	default:

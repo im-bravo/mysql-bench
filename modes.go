@@ -509,6 +509,7 @@ func DoWritesMySQL(session *sql.DB, sessionRead *sql.DB, resultChannel chan Resu
 		item_name := "The Bull [ブル]"
 		item_url := "https://item.rakuten.co.jp/offinet-kagu/10690332/?s-id=top_normal_target_ads&iasid=07rpp_31021_20028__e7-k53kmrbv-7jv-532d2cbd-3eb4-4077-bd35-933615c634a4"
 		requestStart := time.Now()
+
 		lres, err := query.Exec(
 			tx_id.String(), request_key.String(), user_id.String(), client_id, granted, "1", "JPY", "1000990", campaign_id.String(), history_url, history_text, item_name, item_url, item_price, order_no, order_url, order_total, true, nowtime, nowtime)
 		requestEnd := time.Now()
@@ -524,6 +525,141 @@ func DoWritesMySQL(session *sql.DB, sessionRead *sql.DB, resultChannel chan Resu
 
 		rb.IncOps()
 		rb.IncRows()
+
+		latency := requestEnd.Sub(requestStart)
+		return nil, latency
+	})
+}
+
+func DoWritesDeepMySQL(session *sql.DB, sessionRead *sql.DB, resultChannel chan Result, workload WorkloadGenerator, rateLimiter RateLimiter) {
+	sqlinsert := "INSERT INTO grant_standard ( " +
+		" tx_id " +
+		", request_key " +
+		", user_id " +
+		", client_id " +
+		", granted " +
+		", request_sub_key " +
+		", currency " +
+		", shop_id " +
+		", campaign_id " +
+		", history_url " + // 10
+		", history_text " +
+		", item_name " +
+		", item_url " +
+		", item_price " +
+		", order_no " +
+		", order_url " +
+		", order_total " +
+		", fix_flag " +
+		", fix_time " +
+		", tx_time " +
+		" ) VALUES (" +
+		" ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " + // 10
+		", ? " +
+		", ? " +
+		", ? " + // item url
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " + // fix_flag
+		", ? " +
+		", ? " +
+		") "
+
+	sqlOneValues := " ,(" +
+		" ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " + // 10
+		", ? " +
+		", ? " +
+		", ? " + // item url
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " +
+		", ? " + // fix_flag
+		", ? " +
+		", ? " +
+		") "
+	
+	var insertRowPerRequest int64
+	var i int64
+	var vi int64
+	insertRowPerRequest = 1000
+
+	for i = 1; i < insertRowPerRequest; i ++ {
+		sqlinsert += sqlOneValues
+	}
+
+
+
+	query, err := session.Prepare(sqlinsert)
+	// query := session.Query("INSERT INTO " + keyspaceName + "." + tableName + " (tx_id,request_key) VALUES (?,?)")
+
+	if err != nil {
+		return
+	}
+
+	RunTest(resultChannel, workload, rateLimiter, func(rb *ResultBuilder) (error, time.Duration) {
+		pk := workload.NextPartitionKey()
+		ck := workload.NextClusteringKey()
+		tx_id, nil := gocql.RandomUUID()
+		request_key, nil := gocql.RandomUUID()
+		user_id, nil := gocql.RandomUUID()
+		campaign_id, nil := gocql.RandomUUID()
+		client_id := ck
+		granted := pk + 1000
+		item_price := 12000
+		order_no := "20930010920092043240"
+		order_url := "https://basket.step.rakuten.co.jp/rms/mall/bs/cartempty/;jsessionid=RFB--5L1oedTVZLU1qjkwK386hwGCvAmH6HvYOMsSk8_YL2a0FuR!-582183230"
+		order_total := 1000
+		nowtime := time.Now()
+
+		history_url := "https://item.rakuten.co.jp/oralb-braun/eb-pro500-kset_cp02/?s-id=top_normal_superdeal_pc"
+		history_text := "ブラウン オーラルB 電動歯ブラシ pro500 & すみずみクリーンキッズ ファミリーセット | Braun Oral-B 公式ストア 正規品 セット 本体 ブラウン電動歯ブラシ ピカチュウ ポケモン 子ども 子供 子供用 キッズ ピカチュー cp2"
+		item_name := "The Bull [ブル]"
+		item_url := "https://item.rakuten.co.jp/offinet-kagu/10690332/?s-id=top_normal_target_ads&iasid=07rpp_31021_20028__e7-k53kmrbv-7jv-532d2cbd-3eb4-4077-bd35-933615c634a4"
+		requestStart := time.Now()
+
+		vals := []interface{}{}
+
+		for vi = 0; vi < insertRowPerRequest; vi ++ {
+			vals = append(vals, tx_id.String(), request_key.String(), user_id.String(), client_id, granted, "1", "JPY", "1000990", campaign_id.String(), history_url, history_text, item_name, item_url, item_price, order_no, order_url, order_total, true, nowtime, nowtime)
+			rb.IncRows()
+			tx_id, nil = gocql.RandomUUID()
+		}
+
+		lres, err := query.Exec(vals...)
+		requestEnd := time.Now()
+		if err != nil {
+			return err, time.Duration(0)
+		}
+
+		affected, err := lres.RowsAffected()
+
+		if affected != insertRowPerRequest {
+			return err, time.Duration(0)
+		}
+
+		rb.IncOps()
+		
 
 		latency := requestEnd.Sub(requestStart)
 		return nil, latency
