@@ -55,6 +55,7 @@ func (v *DistributionValue) Set(s string) error {
 
 var (
 	keyspaceName     string
+	rowPerRequest    int64
 	tableName        string
 	counterTableName string
 	username         string
@@ -254,6 +255,7 @@ func main() {
 	flag.StringVar(&distribution, "distribution", "uniform", "distribution of keys (relevant only for time series reads): uniform, hnormal")
 
 	flag.StringVar(&keyspaceName, "keyspace", "scylla_bench", "keyspace to use")
+	flag.Int64Var(&rowPerRequest, "row-per-request", 1000, "row per request")
 	flag.StringVar(&tableName, "table", "test", "table to use")
 	flag.StringVar(&username, "username", "", "cql username for authentication")
 	flag.StringVar(&password, "password", "", "cql password for authentication")

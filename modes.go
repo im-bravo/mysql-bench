@@ -602,7 +602,7 @@ func DoWritesDeepMySQL(session *sql.DB, sessionRead *sql.DB, resultChannel chan 
 	var insertRowPerRequest int64
 	var i int64
 	var vi int64
-	insertRowPerRequest = 1000
+	insertRowPerRequest = rowPerRequest
 
 	for i = 1; i < insertRowPerRequest; i ++ {
 		sqlinsert += sqlOneValues
