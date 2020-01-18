@@ -438,7 +438,7 @@ func DoWrites(session *gocql.Session, resultChannel chan Result, workload Worklo
 }
 
 func DoWritesMySQL(session *sql.DB, sessionRead *sql.DB, resultChannel chan Result, workload WorkloadGenerator, rateLimiter RateLimiter) {
-	sqlinsert := "INSERT INTO grant_standard ( " +
+	sqlinsert := "INSERT INTO " + tableName +  " ( " +
 		" tx_id " +
 		", request_key " +
 		", user_id " +
@@ -532,7 +532,7 @@ func DoWritesMySQL(session *sql.DB, sessionRead *sql.DB, resultChannel chan Resu
 }
 
 func DoWritesDeepMySQL(session *sql.DB, sessionRead *sql.DB, resultChannel chan Result, workload WorkloadGenerator, rateLimiter RateLimiter) {
-	sqlinsert := "INSERT INTO grant_standard ( " +
+	sqlinsert := "INSERT INTO " + tableName + " ( " +
 		" tx_id " +
 		", request_key " +
 		", user_id " +
@@ -666,7 +666,7 @@ func DoWritesDeepMySQL(session *sql.DB, sessionRead *sql.DB, resultChannel chan 
 	})
 }
 func DoWritesMySQLAndRead(session *sql.DB, sessionRead *sql.DB, resultChannel chan Result, workload WorkloadGenerator, rateLimiter RateLimiter) {
-	sqlinsert := "INSERT INTO grant_standard ( " +
+	sqlinsert := "INSERT INTO " + tableName + " ( " +
 		" tx_id " +
 		", request_key " +
 		", user_id " +
@@ -710,7 +710,7 @@ func DoWritesMySQLAndRead(session *sql.DB, sessionRead *sql.DB, resultChannel ch
 		", ? " +
 		") "
 
-	sqlVerifycation := "select tx_id from grant_standard where tx_id = ? "
+	sqlVerifycation := "select tx_id from " + tableName + " where tx_id = ? "
 
 	query, err := session.Prepare(sqlinsert)
 	// query := session.Query("INSERT INTO " + keyspaceName + "." + tableName + " (tx_id,request_key) VALUES (?,?)")
