@@ -376,11 +376,15 @@ func main() {
 		fmt.Println(constr)
 		if i == 0 {
 			sessionDefault, err = sql.Open("mysql", constr)
+			sessionDefault.SetMaxIdleConns(50)
+			sessionDefault.SetMaxOpenConns(1000)
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else {
 			sessionReadVerify, err = sql.Open("mysql", constr)
+			sessionDefault.SetMaxIdleConns(50)
+			sessionDefault.SetMaxOpenConns(1000)
 			if err != nil {
 				log.Fatal(err)
 			}
