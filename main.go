@@ -377,14 +377,16 @@ func main() {
 		if i == 0 {
 			sessionDefault, err = sql.Open("mysql", constr)
 			sessionDefault.SetMaxIdleConns(50)
-			sessionDefault.SetMaxOpenConns(1000)
+			sessionDefault.SetConnMaxLifetime(time.Second*5)
+			sessionDefault.SetMaxOpenConns(600)
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else {
 			sessionReadVerify, err = sql.Open("mysql", constr)
-			sessionDefault.SetMaxIdleConns(50)
-			sessionDefault.SetMaxOpenConns(1000)
+			sessionReadVerify.SetMaxIdleConns(50)
+			sessionReadVerify.SetConnMaxLifetime(time.Second*5)
+			sessionReadVerify.SetMaxOpenConns(600)
 			if err != nil {
 				log.Fatal(err)
 			}
